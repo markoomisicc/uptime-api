@@ -16,49 +16,30 @@ Frontend: _(link to Angular repository, coming soon)_
 
 Requirements: Go 1.22+, Docker, `make`
 
-### 1. Start the database
-
 ```bash
-cp .env.example .env
-docker compose up -d
+make tools   # install development tools (once)
+make setup   # create .env, start the database and run migrations
+make dev     # run the API with live reload
 ```
 
-If port 5432 is already in use, change `DB_PORT` in `.env`.
+The API runs on `http://localhost:8080`. If port 5432 is already in use, change `DB_PORT` in `.env` and run `make setup` again.
 
-### 2. Run migrations
-
-```bash
-go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-make migrate-up
-```
-
-### 3. Run the API
-
-```bash
-go run ./cmd/api
-```
-
-The server starts on `http://localhost:8080` (set the `PORT` environment variable to change it).
-
-### Development with live reload
-
-```bash
-go install github.com/air-verse/air@latest
-air
-```
-
-## Database migrations
+## Commands
 
 | Command | Description |
 |---|---|
+| `make tools` | Install Air, golang-migrate and sqlc |
+| `make setup` | Create `.env`, start the database and apply migrations |
+| `make dev` | Run the API with live reload |
 | `make migrate-up` | Apply all pending migrations |
 | `make migrate-down` | Roll back the last migration |
 | `make migrate-create name=<name>` | Create a new migration |
+| `make generate` | Generate Go code from SQL queries |
 
 Migrations that have been merged into `main` must never be edited. Create a new migration instead.
 
 ## Endpoints
 
-| Method | Path      | Description                           |
-|--------|-----------|---------------------------------------|
-| GET    | `/health` | Server and database health check      |
+| Method | Path      | Description                      |
+|--------|-----------|----------------------------------|
+| GET    | `/health` | Server and database health check |

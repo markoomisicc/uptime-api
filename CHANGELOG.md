@@ -19,3 +19,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Moved HTTP handlers into the `internal/api` package with shared JSON helpers
+- Simplified local development setup with `make tools`, `make setup` and `make dev`
