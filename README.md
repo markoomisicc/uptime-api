@@ -10,6 +10,7 @@ Frontend: _(link to Angular repository, coming soon)_
 - PostgreSQL 18
 - Docker Compose
 - [golang-migrate](https://github.com/golang-migrate/migrate) for database migrations
+- [sqlc](https://sqlc.dev) for type-safe database queries
 
 ## Getting started
 
