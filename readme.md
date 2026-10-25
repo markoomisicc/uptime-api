@@ -7,10 +7,23 @@ Frontend: _(link to Angular repository, coming soon)_
 ## Tech stack
 
 - Go (standard library `net/http`)
+- PostgreSQL 18
+- Docker Compose
 
 ## Getting started
 
-Requirements: Go 1.22+
+Requirements: Go 1.22+, Docker
+
+### 1. Start the database
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+If port 5432 is already in use, change `DB_PORT` in `.env`.
+
+### 2. Run the API
 
 ```bash
 go run ./cmd/api
