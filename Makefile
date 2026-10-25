@@ -11,3 +11,6 @@ migrate-down:
 
 migrate-create:
 	@migrate create -ext sql -dir migrations -seq $(name)
+
+generate:
+	@sqlc generate
