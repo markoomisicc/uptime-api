@@ -16,3 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Database migrations with golang-migrate
 - Initial schema with users, organizations, roles and organization membership
 - Type-safe database queries generated with sqlc
+
+### Changed
+- Moved HTTP handlers into the `internal/api` package with shared JSON helpers
