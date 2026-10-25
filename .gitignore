@@ -1,0 +1,17 @@
+# Kompajlirani binary
+/bin/
+*.exe
+
+# Environment varijable (lozinke, tajni ključevi)
+.env
+
+# Test i coverage izlaz
+*.test
+coverage.out
+
+# Editor i OS
+.vscode/
+.idea/
+.DS_Store
+
+/tmp/
