@@ -43,3 +43,4 @@ Migrations that have been merged into `main` must never be edited. Create a new 
 | Method | Path      | Description                      |
 |--------|-----------|----------------------------------|
 | GET    | `/health` | Server and database health check |
+| POST   | `/auth/register` | Register a new user account |

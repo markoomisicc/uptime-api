@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/markoomisicc/uptime-api/internal/api"
 	"github.com/markoomisicc/uptime-api/internal/config"
