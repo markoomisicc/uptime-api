@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"errors"
-	"log"
 	"net"
 	"net/http"
 	"time"
@@ -80,18 +79,17 @@ func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(sessionCookieName)
 		if err != nil {
-			writeError(w, http.StatusUnauthorized, "authentication required")
+			writeError(w, http.StatusUnauthorized, "authentication_required", "Authentication required")
 			return
 		}
 
 		row, err := s.queries.GetUserBySessionToken(r.Context(), hashToken(cookie.Value))
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
-				writeError(w, http.StatusUnauthorized, "authentication required")
+				writeError(w, http.StatusUnauthorized, "authentication_required", "Authentication required")
 				return
 			}
-			log.Printf("get session: %v", err)
-			writeError(w, http.StatusInternalServerError, "internal server error")
+			writeInternalError(w, "get session", err)
 			return
 		}
 

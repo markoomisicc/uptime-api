@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Health check endpoint (`GET /health`)
 - Live reload for local development using Air
 - PostgreSQL database setup with Docker Compose
@@ -18,7 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type-safe database queries generated with sqlc
 - User registration endpoint (`POST /auth/register`)
 - Session-based authentication with login, logout and current user endpoints
+- User language preference with support for English and German
+- Endpoint for updating the current user (`PATCH /auth/me`)
 
 ### Changed
+
 - Moved HTTP handlers into the `internal/api` package with shared JSON helpers
 - Simplified local development setup with `make tools`, `make setup` and `make dev`
+- API errors now include a machine-readable code alongside the message

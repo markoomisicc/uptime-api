@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"net/mail"
 	"regexp"
@@ -21,6 +20,14 @@ var (
 	phonePattern    = regexp.MustCompile(`^\+[1-9][0-9]{6,14}$`)
 )
 
+var dummyPasswordHash, _ = bcrypt.GenerateFromPassword([]byte("dummy-password"), bcrypt.DefaultCost)
+
+func isSupportedLanguage(language string) bool {
+	return language == "en" || language == "de"
+}
+
+// Register
+
 type registerRequest struct {
 	Email     string  `json:"email"`
 	Username  string  `json:"username"`
@@ -29,6 +36,7 @@ type registerRequest struct {
 	LastName  string  `json:"last_name"`
 	Phone     *string `json:"phone"`
 	Timezone  string  `json:"timezone"`
+	Language  string  `json:"language"`
 }
 
 func (req *registerRequest) normalize() {
@@ -42,6 +50,11 @@ func (req *registerRequest) normalize() {
 		req.Timezone = "UTC"
 	}
 
+	req.Language = strings.TrimSpace(req.Language)
+	if req.Language == "" {
+		req.Language = "en"
+	}
+
 	if req.Phone != nil {
 		phone := strings.TrimSpace(*req.Phone)
 		if phone == "" {
@@ -52,35 +65,43 @@ func (req *registerRequest) normalize() {
 	}
 }
 
-func (req registerRequest) validate() map[string]string {
-	errs := map[string]string{}
+func (req registerRequest) validate() map[string]fieldError {
+	errs := map[string]fieldError{}
 
 	if addr, err := mail.ParseAddress(req.Email); err != nil || addr.Address != req.Email || len(req.Email) > 254 {
-		errs["email"] = "must be a valid email address"
+		errs["email"] = fieldError{"invalid", "must be a valid email address"}
 	}
 
 	if !usernamePattern.MatchString(req.Username) {
-		errs["username"] = "must be 3-30 characters long and contain only letters, numbers, _ or -"
+		errs["username"] = fieldError{"invalid", "must be 3-30 characters long and contain only letters, numbers, _ or -"}
 	}
 
 	if len(req.Password) < 8 || len(req.Password) > 72 {
-		errs["password"] = "must be between 8 and 72 characters long"
+		errs["password"] = fieldError{"invalid_length", "must be between 8 and 72 characters long"}
 	}
 
-	if req.FirstName == "" || len(req.FirstName) > 100 {
-		errs["first_name"] = "is required and must be at most 100 characters long"
+	if req.FirstName == "" {
+		errs["first_name"] = fieldError{"required", "is required"}
+	} else if len(req.FirstName) > 100 {
+		errs["first_name"] = fieldError{"too_long", "must be at most 100 characters long"}
 	}
 
-	if req.LastName == "" || len(req.LastName) > 100 {
-		errs["last_name"] = "is required and must be at most 100 characters long"
+	if req.LastName == "" {
+		errs["last_name"] = fieldError{"required", "is required"}
+	} else if len(req.LastName) > 100 {
+		errs["last_name"] = fieldError{"too_long", "must be at most 100 characters long"}
 	}
 
 	if req.Phone != nil && !phonePattern.MatchString(*req.Phone) {
-		errs["phone"] = "must be in international format, e.g. +385911234567"
+		errs["phone"] = fieldError{"invalid", "must be in international format, e.g. +385911234567"}
 	}
 
 	if _, err := time.LoadLocation(req.Timezone); err != nil {
-		errs["timezone"] = "must be a valid time zone, e.g. Europe/Zagreb"
+		errs["timezone"] = fieldError{"invalid", "must be a valid time zone, e.g. Europe/Zagreb"}
+	}
+
+	if !isSupportedLanguage(req.Language) {
+		errs["language"] = fieldError{"invalid", "must be one of: en, de"}
 	}
 
 	return errs
@@ -94,6 +115,7 @@ type userResponse struct {
 	LastName      string    `json:"last_name"`
 	Phone         *string   `json:"phone"`
 	Timezone      string    `json:"timezone"`
+	Language      string    `json:"language"`
 	EmailVerified bool      `json:"email_verified"`
 	CreatedAt     time.Time `json:"created_at"`
 }
@@ -107,6 +129,7 @@ func newUserResponse(user store.User) userResponse {
 		LastName:      user.LastName,
 		Phone:         user.Phone,
 		Timezone:      user.Timezone,
+		Language:      user.Language,
 		EmailVerified: user.EmailVerifiedAt != nil,
 		CreatedAt:     user.CreatedAt.UTC(),
 	}
@@ -115,20 +138,19 @@ func newUserResponse(user store.User) userResponse {
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := readJSON(w, r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, "invalid_request_body", "Request body must be valid JSON")
 		return
 	}
 
 	req.normalize()
 	if errs := req.validate(); len(errs) > 0 {
-		writeFieldErrors(w, http.StatusUnprocessableEntity, "validation failed", errs)
+		writeFieldErrors(w, http.StatusUnprocessableEntity, "validation_failed", "Validation failed", errs)
 		return
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Printf("hash password: %v", err)
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		writeInternalError(w, "hash password", err)
 		return
 	}
 
@@ -140,29 +162,31 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		LastName:     req.LastName,
 		Phone:        req.Phone,
 		Timezone:     req.Timezone,
+		Language:     req.Language,
 	})
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			switch pgErr.ConstraintName {
 			case "users_email_unique":
-				writeFieldErrors(w, http.StatusConflict, "already exists", map[string]string{"email": "is already registered"})
+				writeFieldErrors(w, http.StatusConflict, "already_exists", "Account already exists",
+					map[string]fieldError{"email": {"taken", "is already registered"}})
 				return
 			case "users_username_unique":
-				writeFieldErrors(w, http.StatusConflict, "already exists", map[string]string{"username": "is already taken"})
+				writeFieldErrors(w, http.StatusConflict, "already_exists", "Account already exists",
+					map[string]fieldError{"username": {"taken", "is already taken"}})
 				return
 			}
 		}
 
-		log.Printf("create user: %v", err)
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		writeInternalError(w, "create user", err)
 		return
 	}
 
 	writeJSON(w, http.StatusCreated, newUserResponse(user))
 }
 
-var dummyPasswordHash, _ = bcrypt.GenerateFromPassword([]byte("dummy-password"), bcrypt.DefaultCost)
+// Login and logout
 
 type loginRequest struct {
 	Email    string `json:"email"`
@@ -172,7 +196,7 @@ type loginRequest struct {
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req loginRequest
 	if err := readJSON(w, r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		writeError(w, http.StatusBadRequest, "invalid_request_body", "Request body must be valid JSON")
 		return
 	}
 
@@ -181,8 +205,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	user, err := s.queries.GetUserByEmail(r.Context(), email)
 	userFound := err == nil
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		log.Printf("get user by email: %v", err)
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		writeInternalError(w, "get user by email", err)
 		return
 	}
 
@@ -193,19 +216,19 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	passwordErr := bcrypt.CompareHashAndPassword(hash, []byte(req.Password))
 	if !userFound || passwordErr != nil {
-		writeError(w, http.StatusUnauthorized, "invalid email or password")
+		writeError(w, http.StatusUnauthorized, "invalid_credentials", "Invalid email or password")
 		return
 	}
 
 	token, expiresAt, err := s.createSession(r, user.ID)
 	if err != nil {
-		log.Printf("create session: %v", err)
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		writeInternalError(w, "create session", err)
 		return
 	}
 
 	if err := s.queries.UpdateUserLastLogin(r.Context(), user.ID); err != nil {
-		log.Printf("update last login: %v", err)
+		// Not critical: the user is logged in even if this update fails.
+		logError("update last login", err)
 	}
 
 	s.setSessionCookie(w, token, expiresAt)
@@ -215,8 +238,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie(sessionCookieName); err == nil {
 		if err := s.queries.DeleteSession(r.Context(), hashToken(cookie.Value)); err != nil {
-			log.Printf("delete session: %v", err)
-			writeError(w, http.StatusInternalServerError, "internal server error")
+			writeInternalError(w, "delete session", err)
 			return
 		}
 	}
@@ -225,6 +247,39 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Current user
+
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, newUserResponse(userFromContext(r.Context())))
+}
+
+type updateMeRequest struct {
+	Language string `json:"language"`
+}
+
+func (s *Server) handleUpdateMe(w http.ResponseWriter, r *http.Request) {
+	var req updateMeRequest
+	if err := readJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_request_body", "Request body must be valid JSON")
+		return
+	}
+
+	if !isSupportedLanguage(req.Language) {
+		writeFieldErrors(w, http.StatusUnprocessableEntity, "validation_failed", "Validation failed",
+			map[string]fieldError{"language": {"invalid", "must be one of: en, de"}})
+		return
+	}
+
+	user := userFromContext(r.Context())
+
+	updated, err := s.queries.UpdateUserLanguage(r.Context(), store.UpdateUserLanguageParams{
+		ID:       user.ID,
+		Language: req.Language,
+	})
+	if err != nil {
+		writeInternalError(w, "update user language", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, newUserResponse(updated))
 }

@@ -47,7 +47,7 @@ func (q *Queries) DeleteSession(ctx context.Context, tokenHash []byte) error {
 }
 
 const getUserBySessionToken = `-- name: GetUserBySessionToken :one
-SELECT users.id, users.email, users.username, users.password_hash, users.first_name, users.last_name, users.phone, users.timezone, users.email_verified_at, users.last_login_at, users.created_at, users.updated_at
+SELECT users.id, users.email, users.username, users.password_hash, users.first_name, users.last_name, users.phone, users.timezone, users.email_verified_at, users.last_login_at, users.created_at, users.updated_at, users.language
 FROM sessions
 JOIN users ON users.id = sessions.user_id
 WHERE sessions.token_hash = $1
@@ -74,6 +74,7 @@ func (q *Queries) GetUserBySessionToken(ctx context.Context, tokenHash []byte) (
 		&i.User.LastLoginAt,
 		&i.User.CreatedAt,
 		&i.User.UpdatedAt,
+		&i.User.Language,
 	)
 	return i, err
 }
