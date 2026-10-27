@@ -31,6 +31,16 @@ type Role struct {
 	Description string
 }
 
+type Session struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	TokenHash []byte
+	UserAgent string
+	IpAddress string
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}
+
 type User struct {
 	ID              uuid.UUID
 	Email           string

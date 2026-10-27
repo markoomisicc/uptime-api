@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/markoomisicc/uptime-api/internal/store"
 	"golang.org/x/crypto/bcrypt"
@@ -107,7 +108,7 @@ func newUserResponse(user store.User) userResponse {
 		Phone:         user.Phone,
 		Timezone:      user.Timezone,
 		EmailVerified: user.EmailVerifiedAt != nil,
-		CreatedAt:     user.CreatedAt,
+		CreatedAt:     user.CreatedAt.UTC(),
 	}
 }
 
@@ -159,4 +160,71 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, newUserResponse(user))
+}
+
+var dummyPasswordHash, _ = bcrypt.GenerateFromPassword([]byte("dummy-password"), bcrypt.DefaultCost)
+
+type loginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
+	var req loginRequest
+	if err := readJSON(w, r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+
+	user, err := s.queries.GetUserByEmail(r.Context(), email)
+	userFound := err == nil
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		log.Printf("get user by email: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	hash := dummyPasswordHash
+	if userFound {
+		hash = []byte(user.PasswordHash)
+	}
+
+	passwordErr := bcrypt.CompareHashAndPassword(hash, []byte(req.Password))
+	if !userFound || passwordErr != nil {
+		writeError(w, http.StatusUnauthorized, "invalid email or password")
+		return
+	}
+
+	token, expiresAt, err := s.createSession(r, user.ID)
+	if err != nil {
+		log.Printf("create session: %v", err)
+		writeError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	if err := s.queries.UpdateUserLastLogin(r.Context(), user.ID); err != nil {
+		log.Printf("update last login: %v", err)
+	}
+
+	s.setSessionCookie(w, token, expiresAt)
+	writeJSON(w, http.StatusOK, newUserResponse(user))
+}
+
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	if cookie, err := r.Cookie(sessionCookieName); err == nil {
+		if err := s.queries.DeleteSession(r.Context(), hashToken(cookie.Value)); err != nil {
+			log.Printf("delete session: %v", err)
+			writeError(w, http.StatusInternalServerError, "internal server error")
+			return
+		}
+	}
+
+	s.clearSessionCookie(w)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, newUserResponse(userFromContext(r.Context())))
 }

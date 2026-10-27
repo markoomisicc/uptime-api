@@ -9,8 +9,9 @@ import (
 )
 
 type Config struct {
-	Port        string
-	DatabaseURL string
+	Port          string
+	DatabaseURL   string
+	SecureCookies bool
 }
 
 func Load() Config {
@@ -25,8 +26,9 @@ func Load() Config {
 	}
 
 	return Config{
-		Port:        getEnv("PORT", "8080"),
-		DatabaseURL: dbURL.String(),
+		Port:          getEnv("PORT", "8080"),
+		DatabaseURL:   dbURL.String(),
+		SecureCookies: getEnv("COOKIE_SECURE", "false") == "true",
 	}
 }
 

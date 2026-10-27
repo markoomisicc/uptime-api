@@ -6,3 +6,7 @@ RETURNING *;
 -- name: GetUserByEmail :one
 SELECT * FROM users
 WHERE lower(email) = lower($1);
+
+-- name: UpdateUserLastLogin :exec
+UPDATE users SET last_login_at = now()
+WHERE id = $1;
