@@ -54,4 +54,5 @@ type User struct {
 	LastLoginAt     *time.Time
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+	Language        string
 }

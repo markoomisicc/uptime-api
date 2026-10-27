@@ -12,9 +12,9 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (email, username, password_hash, first_name, last_name, phone, timezone)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, email, username, password_hash, first_name, last_name, phone, timezone, email_verified_at, last_login_at, created_at, updated_at
+INSERT INTO users (email, username, password_hash, first_name, last_name, phone, timezone, language)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, email, username, password_hash, first_name, last_name, phone, timezone, email_verified_at, last_login_at, created_at, updated_at, language
 `
 
 type CreateUserParams struct {
@@ -25,6 +25,7 @@ type CreateUserParams struct {
 	LastName     string
 	Phone        *string
 	Timezone     string
+	Language     string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -36,6 +37,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.LastName,
 		arg.Phone,
 		arg.Timezone,
+		arg.Language,
 	)
 	var i User
 	err := row.Scan(
@@ -51,12 +53,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Language,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, username, password_hash, first_name, last_name, phone, timezone, email_verified_at, last_login_at, created_at, updated_at FROM users
+SELECT id, email, username, password_hash, first_name, last_name, phone, timezone, email_verified_at, last_login_at, created_at, updated_at, language FROM users
 WHERE lower(email) = lower($1)
 `
 
@@ -76,6 +79,39 @@ func (q *Queries) GetUserByEmail(ctx context.Context, lower string) (User, error
 		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Language,
+	)
+	return i, err
+}
+
+const updateUserLanguage = `-- name: UpdateUserLanguage :one
+UPDATE users SET language = $2, updated_at = now()
+WHERE id = $1
+RETURNING id, email, username, password_hash, first_name, last_name, phone, timezone, email_verified_at, last_login_at, created_at, updated_at, language
+`
+
+type UpdateUserLanguageParams struct {
+	ID       uuid.UUID
+	Language string
+}
+
+func (q *Queries) UpdateUserLanguage(ctx context.Context, arg UpdateUserLanguageParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserLanguage, arg.ID, arg.Language)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Username,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.Phone,
+		&i.Timezone,
+		&i.EmailVerifiedAt,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Language,
 	)
 	return i, err
 }

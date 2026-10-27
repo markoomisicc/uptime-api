@@ -7,21 +7,35 @@ import (
 	"net/http"
 )
 
+type fieldError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 func writeJSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Printf("write json: %v", err)
+		logError("write json", err)
 	}
 }
 
-func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]string{"error": message})
+func writeError(w http.ResponseWriter, status int, code, message string) {
+	writeJSON(w, status, map[string]string{"error": code, "message": message})
 }
 
-func writeFieldErrors(w http.ResponseWriter, status int, message string, fields map[string]string) {
-	writeJSON(w, status, map[string]any{"error": message, "fields": fields})
+func writeFieldErrors(w http.ResponseWriter, status int, code, message string, fields map[string]fieldError) {
+	writeJSON(w, status, map[string]any{"error": code, "message": message, "fields": fields})
+}
+
+func writeInternalError(w http.ResponseWriter, context string, err error) {
+	logError(context, err)
+	writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
+}
+
+func logError(context string, err error) {
+	log.Printf("%s: %v", context, err)
 }
 
 func readJSON(w http.ResponseWriter, r *http.Request, dst any) error {

@@ -34,6 +34,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /auth/login", s.handleLogin)
 	mux.HandleFunc("POST /auth/logout", s.handleLogout)
 	mux.HandleFunc("GET /auth/me", s.requireAuth(s.handleMe))
+	mux.HandleFunc("PATCH /auth/me", s.requireAuth(s.handleUpdateMe))
 
 	return mux
 }
