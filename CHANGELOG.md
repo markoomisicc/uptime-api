@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial schema with users, organizations, roles and organization membership
 - Type-safe database queries generated with sqlc
 - User registration endpoint (`POST /auth/register`)
+- Session-based authentication with login, logout and current user endpoints
 
 ### Changed
 - Moved HTTP handlers into the `internal/api` package with shared JSON helpers

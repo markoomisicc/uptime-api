@@ -44,3 +44,6 @@ Migrations that have been merged into `main` must never be edited. Create a new 
 |--------|-----------|----------------------------------|
 | GET    | `/health` | Server and database health check |
 | POST   | `/auth/register` | Register a new user account |
+| POST   | `/auth/login`    | Log in and start a session       |
+| POST   | `/auth/logout`   | End the current session          |
+| GET    | `/auth/me`       | Get the currently logged-in user |

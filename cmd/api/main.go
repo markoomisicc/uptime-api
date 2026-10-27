@@ -25,7 +25,7 @@ func main() {
 	defer pool.Close()
 	log.Println("Connected to database")
 
-	server := api.NewServer(pool)
+	server := api.NewServer(cfg, pool)
 
 	log.Printf("API listening on http://localhost:%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, server.Routes()); err != nil {
