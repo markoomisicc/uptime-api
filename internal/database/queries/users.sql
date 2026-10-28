@@ -15,3 +15,9 @@ WHERE id = $1;
 UPDATE users SET language = $2, updated_at = now()
 WHERE id = $1
 RETURNING *;
+
+-- name: MarkUserEmailVerified :one
+UPDATE users
+SET email_verified_at = COALESCE(email_verified_at, now()), updated_at = now()
+WHERE id = $1
+RETURNING *;

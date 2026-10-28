@@ -10,18 +10,20 @@ import (
 )
 
 type Server struct {
-	cfg     config.Config
-	pool    *pgxpool.Pool
-	queries *store.Queries
-	mailer  *mail.Mailer
+	cfg           config.Config
+	pool          *pgxpool.Pool
+	queries       *store.Queries
+	mailer        *mail.Mailer
+	resendLimiter *cooldownLimiter
 }
 
 func NewServer(cfg config.Config, pool *pgxpool.Pool, mailer *mail.Mailer) *Server {
 	return &Server{
-		cfg:     cfg,
-		pool:    pool,
-		queries: store.New(pool),
-		mailer:  mailer,
+		cfg:           cfg,
+		pool:          pool,
+		queries:       store.New(pool),
+		mailer:        mailer,
+		resendLimiter: newCooldownLimiter(resendCooldown),
 	}
 }
 
@@ -36,6 +38,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /auth/register", s.handleRegister)
 	mux.HandleFunc("POST /auth/login", s.handleLogin)
 	mux.HandleFunc("POST /auth/logout", s.handleLogout)
+	mux.HandleFunc("POST /auth/verify-email", s.handleVerifyEmail)
+	mux.HandleFunc("POST /auth/verify-email/resend", s.handleResendVerification)
 	mux.HandleFunc("GET /auth/me", s.requireAuth(s.handleMe))
 	mux.HandleFunc("PATCH /auth/me", s.requireAuth(s.handleUpdateMe))
 
