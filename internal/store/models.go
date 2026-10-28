@@ -56,3 +56,12 @@ type User struct {
 	UpdatedAt       time.Time
 	Language        string
 }
+
+type UserToken struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Purpose   string
+	TokenHash []byte
+	ExpiresAt time.Time
+	CreatedAt time.Time
+}

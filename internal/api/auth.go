@@ -183,6 +183,11 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := s.sendVerificationEmail(r.Context(), user); err != nil {
+		// The account exists; the user can request a new email.
+		logError("send verification email", err)
+	}
+
 	writeJSON(w, http.StatusCreated, newUserResponse(user))
 }
 
@@ -217,6 +222,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	passwordErr := bcrypt.CompareHashAndPassword(hash, []byte(req.Password))
 	if !userFound || passwordErr != nil {
 		writeError(w, http.StatusUnauthorized, "invalid_credentials", "Invalid email or password")
+		return
+	}
+
+	if user.EmailVerifiedAt == nil {
+		writeError(w, http.StatusForbidden, "email_not_verified", "Email address is not verified")
 		return
 	}
 

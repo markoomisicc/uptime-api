@@ -84,6 +84,34 @@ func (q *Queries) GetUserByEmail(ctx context.Context, lower string) (User, error
 	return i, err
 }
 
+const markUserEmailVerified = `-- name: MarkUserEmailVerified :one
+UPDATE users
+SET email_verified_at = COALESCE(email_verified_at, now()), updated_at = now()
+WHERE id = $1
+RETURNING id, email, username, password_hash, first_name, last_name, phone, timezone, email_verified_at, last_login_at, created_at, updated_at, language
+`
+
+func (q *Queries) MarkUserEmailVerified(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, markUserEmailVerified, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Username,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.Phone,
+		&i.Timezone,
+		&i.EmailVerifiedAt,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Language,
+	)
+	return i, err
+}
+
 const updateUserLanguage = `-- name: UpdateUserLanguage :one
 UPDATE users SET language = $2, updated_at = now()
 WHERE id = $1

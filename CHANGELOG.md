@@ -22,9 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User language preference with support for English and German
 - Endpoint for updating the current user (`PATCH /auth/me`)
 - Email sending via SMTP, with Mailpit for local development
+- Email verification with a link sent after registration
+- Endpoint for resending the verification email, limited to once per minute per address
 
 ### Changed
 
 - Moved HTTP handlers into the `internal/api` package with shared JSON helpers
 - Simplified local development setup with `make tools`, `make setup` and `make dev`
 - API errors now include a machine-readable code alongside the message
+- Login requires a verified email address
