@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/markoomisicc/uptime-api/internal/config"
+	"github.com/markoomisicc/uptime-api/internal/mail"
 	"github.com/markoomisicc/uptime-api/internal/store"
 )
 
@@ -12,13 +13,15 @@ type Server struct {
 	cfg     config.Config
 	pool    *pgxpool.Pool
 	queries *store.Queries
+	mailer  *mail.Mailer
 }
 
-func NewServer(cfg config.Config, pool *pgxpool.Pool) *Server {
+func NewServer(cfg config.Config, pool *pgxpool.Pool, mailer *mail.Mailer) *Server {
 	return &Server{
 		cfg:     cfg,
 		pool:    pool,
 		queries: store.New(pool),
+		mailer:  mailer,
 	}
 }
 

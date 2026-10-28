@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session-based authentication with login, logout and current user endpoints
 - User language preference with support for English and German
 - Endpoint for updating the current user (`PATCH /auth/me`)
+- Email sending via SMTP, with Mailpit for local development
 
 ### Changed
 

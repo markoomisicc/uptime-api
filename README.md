@@ -15,6 +15,7 @@ Frontend: _(link to Angular repository, coming soon)_
 ## Getting started
 
 Requirements: Go 1.22+, Docker, `make`
+Emails sent in development are captured by Mailpit at http://localhost:8025
 
 ```bash
 make tools   # install development tools (once)
@@ -26,24 +27,24 @@ The API runs on `http://localhost:8080`. If port 5432 is already in use, change 
 
 ## Commands
 
-| Command | Description |
-|---|---|
-| `make tools` | Install Air, golang-migrate and sqlc |
-| `make setup` | Create `.env`, start the database and apply migrations |
-| `make dev` | Run the API with live reload |
-| `make migrate-up` | Apply all pending migrations |
-| `make migrate-down` | Roll back the last migration |
-| `make migrate-create name=<name>` | Create a new migration |
-| `make generate` | Generate Go code from SQL queries |
+| Command                           | Description                                            |
+| --------------------------------- | ------------------------------------------------------ |
+| `make tools`                      | Install Air, golang-migrate and sqlc                   |
+| `make setup`                      | Create `.env`, start the database and apply migrations |
+| `make dev`                        | Run the API with live reload                           |
+| `make migrate-up`                 | Apply all pending migrations                           |
+| `make migrate-down`               | Roll back the last migration                           |
+| `make migrate-create name=<name>` | Create a new migration                                 |
+| `make generate`                   | Generate Go code from SQL queries                      |
 
 Migrations that have been merged into `main` must never be edited. Create a new migration instead.
 
 ## Endpoints
 
-| Method | Path      | Description                      |
-|--------|-----------|----------------------------------|
-| GET    | `/health` | Server and database health check |
-| POST   | `/auth/register` | Register a new user account |
+| Method | Path             | Description                      |
+| ------ | ---------------- | -------------------------------- |
+| GET    | `/health`        | Server and database health check |
+| POST   | `/auth/register` | Register a new user account      |
 | POST   | `/auth/login`    | Log in and start a session       |
 | POST   | `/auth/logout`   | End the current session          |
 | GET    | `/auth/me`       | Get the currently logged-in user |
